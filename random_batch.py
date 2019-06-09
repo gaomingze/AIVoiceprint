@@ -69,3 +69,34 @@ class MiniBatch:
         self.libri_batch = pd.DataFrame(pd.concat([anchor_batch, positive_batch, negative_batch], axis=0))
         self.num_triplets = num_triplets
 
+    def to_inputs(self):
+
+        new_x = []
+        for i in range(len(self.libri_batch)):
+            filename = self.libri_batch[i:i + 1]['filename'].values[0]
+            x = np.load(filename)
+            new_x.append(clipped_audio(x))
+        x = np.array(new_x) #(batchsize, num_frames, 64, 1)
+        y = self.libri_batch['speaker_id'].values
+
+        # anchor examples [speakers] == positive examples [speakers]
+        np.testing.assert_array_equal(y[0:self.num_triplets], y[self.num_triplets:2 * self.num_triplets])
+
+        return x, y
+
+
+def stochastic_mini_batch(libri, batch_size=c.BATCH_SIZE,unique_speakers=None):
+    mini_batch = MiniBatch(libri, batch_size,unique_speakers)
+    return mini_batch
+
+
+def main():
+    libri = data_catalog(c.DATASET_DIR)
+    batch = stochastic_mini_batch(libri, c.BATCH_SIZE)
+
+    x, y = batch.to_inputs()
+    print(x.shape,y.shape)
+
+
+if __name__ == '__main__':
+    main()
